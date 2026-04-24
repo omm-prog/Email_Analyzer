@@ -3,53 +3,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analysis Result</title>
+  <title>Email Forensics Platform</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <div class="container">
-    <h1>Analysis Result</h1>
-    <p>File: <strong>{{ filename }}</strong></p>
-    <p><a href="/">Analyze another file</a></p>
+    <header class="hero">
+      <h1><span class="bolt">⚡</span> Email Forensics Platform</h1>
+      <p>Advanced Threat Correlation • MITRE ATT&CK Mapping • BEC Detection</p>
+    </header>
+
+    <section class="top-grid">
+      <div class="risk-wrap">
+        <div class="risk-ring risk-{{ result.risk.level|lower }}">
+          <div class="risk-score">{{ result.risk.score }}</div>
+          <div class="risk-label">{{ result.risk.level }} RISK</div>
+        </div>
+      </div>
+
+      <div class="headline-wrap">
+        <h2 class="headline">{{ result.summary.subject or "No Subject" }}</h2>
+        <p class="meta-line">{{ result.summary.from }}</p>
+        <p class="meta-line">{{ result.summary.date }}</p>
+      </div>
+
+      <div class="action-wrap">
+        <a href="/" class="pill-btn">↻ New</a>
+        <span class="pill-btn muted">📄 JSON</span>
+        <span class="pill-btn active">⇩ PDF</span>
+      </div>
+    </section>
+
+    <section class="card danger-banner {% if result.risk.level != 'HIGH' %}soft{% endif %}">
+      {% if result.risk.reasons %}
+      <p>{{ result.risk.reasons|join(" • ") }}</p>
+      {% else %}
+      <p>No major indicators were triggered by current rules.</p>
+      {% endif %}
+    </section>
+
+    <section class="status-grid">
+      <article class="status-card">
+        <div class="status-title">SPF</div>
+        <div class="status-value {% if result.header_analysis.auth.spf == 'fail' %}danger{% elif result.header_analysis.auth.spf == 'pass' %}ok{% else %}warn{% endif %}">
+          {% if result.header_analysis.auth.spf == 'pass' %}✓ {% else %}✗ {% endif %}{{ result.header_analysis.auth.spf }}
+        </div>
+      </article>
+      <article class="status-card">
+        <div class="status-title">DKIM</div>
+        <div class="status-value {% if result.header_analysis.auth.dkim == 'valid' %}ok{% elif result.header_analysis.auth.dkim == 'present' %}warn{% else %}danger{% endif %}">
+          {% if result.header_analysis.auth.dkim == 'valid' %}✓ {% else %}✗ {% endif %}{{ result.header_analysis.auth.dkim }}
+        </div>
+      </article>
+      <article class="status-card">
+        <div class="status-title">DMARC</div>
+        <div class="status-value {% if result.header_analysis.auth.dmarc == 'present' %}ok{% else %}danger{% endif %}">
+          {% if result.header_analysis.auth.dmarc == 'present' %}✓ {% else %}✗ {% endif %}{{ result.header_analysis.auth.dmarc }}
+        </div>
+      </article>
+    </section>
+
+    <section class="tab-row">
+      <span class="tab active">⚠ Threat Indicators {{ result.risk.reasons|length }}</span>
+      <span class="tab">✔ Mitigations {{ 1 if result.provider_detection.via_google else 0 }}</span>
+      <span class="tab">🔗 URL Analysis {{ result.url_analysis.urls|length }}</span>
+      <span class="tab">🌐 IP Intel {{ 1 if result.header_analysis.origin_ip else 0 }}</span>
+      <span class="tab">◎ Correlator Notes 2</span>
+    </section>
 
     <section class="card">
-      <h2>Email Summary</h2>
+      <h3>Email Summary</h3>
+      <p><strong>File:</strong> {{ filename }}</p>
       <p><strong>From:</strong> {{ result.summary.from }}</p>
       <p><strong>To:</strong> {{ result.summary.to }}</p>
-      <p><strong>Subject:</strong> {{ result.summary.subject }}</p>
-      <p><strong>Date:</strong> {{ result.summary.date }}</p>
       <p><strong>Return-Path:</strong> {{ result.summary.return_path }}</p>
+      <p><strong>Email Provider:</strong> <span class="{% if result.provider_detection.provider == 'Other' %}warn{% else %}ok{% endif %}">{{ result.provider_detection.provider }}</span></p>
     </section>
 
     <section class="card">
-      <h2>Risk Score</h2>
-      <p class="{% if result.risk.level == 'HIGH' %}danger{% elif result.risk.level == 'MEDIUM' %}warn{% else %}ok{% endif %}">
-        <strong>{{ result.risk.level }}</strong> ({{ result.risk.score }})
-      </p>
-      <ul>
-        {% for reason in result.risk.reasons %}
-          <li class="danger">{{ reason }}</li>
-        {% endfor %}
-      </ul>
-    </section>
-
-    <section class="card">
-      <h2>Google Provider Detection</h2>
-      <p><strong>Email Provider:</strong>
-        <span class="{% if result.provider_detection.provider == 'Other' %}warn{% else %}ok{% endif %}">
-          {{ result.provider_detection.provider }}
-        </span>
-      </p>
-      <ul>
-        <li>Received via google.com: {{ result.provider_detection.signals.received_google }}</li>
-        <li>X-Google-Smtp-Source: {{ result.provider_detection.signals.x_google_smtp_source }}</li>
-        <li>X-Received Google markers: {{ result.provider_detection.signals.x_received_google }}</li>
-        <li>Google DKIM domain: {{ result.provider_detection.signals.dkim_google }}</li>
-      </ul>
-    </section>
-
-    <section class="card">
-      <h2>Header Analysis</h2>
+      <h3>Header Analysis</h3>
       <p><strong>Originating IP:</strong> {{ result.header_analysis.origin_ip or 'Not found' }}</p>
       {% if result.header_analysis.origin_geo %}
       <p><strong>Origin Location:</strong>
@@ -59,9 +91,10 @@
         ({{ result.header_analysis.origin_geo.isp }})
       </p>
       {% endif %}
-      <p><strong>SPF:</strong> <span class="{% if result.header_analysis.auth.spf == 'fail' %}danger{% endif %}">{{ result.header_analysis.auth.spf }}</span></p>
-      <p><strong>DKIM:</strong> <span class="{% if result.header_analysis.auth.dkim == 'missing' or result.header_analysis.auth.dkim == 'invalid' %}danger{% endif %}">{{ result.header_analysis.auth.dkim }}</span></p>
-      <p><strong>DMARC:</strong> <span class="{% if result.header_analysis.auth.dmarc == 'absent' %}warn{% endif %}">{{ result.header_analysis.auth.dmarc }}</span></p>
+      <p><strong>Received via google.com:</strong> {{ result.provider_detection.signals.received_google }}</p>
+      <p><strong>X-Google-Smtp-Source:</strong> {{ result.provider_detection.signals.x_google_smtp_source }}</p>
+      <p><strong>X-Received Google markers:</strong> {{ result.provider_detection.signals.x_received_google }}</p>
+      <p><strong>Google DKIM marker:</strong> {{ result.provider_detection.signals.dkim_google }}</p>
       <p>
         <strong>From vs Return-Path:</strong>
         {% if result.header_analysis.domain_mismatch %}
@@ -71,7 +104,7 @@
         {% endif %}
       </p>
 
-      <h3>Received Chain</h3>
+      <h4>Received Chain</h4>
       <ul>
         {% for item in result.header_analysis.received_chain %}
           <li><code>{{ item }}</code></li>
@@ -80,7 +113,7 @@
     </section>
 
     <section class="card">
-      <h2>Domain Intelligence</h2>
+      <h3>Domain Intelligence</h3>
       <p><strong>Sender Domain:</strong> {{ result.domain_intel.sender_domain }}</p>
       <p><strong>Domain Type:</strong> {{ result.domain_intel.domain_type }}</p>
       <p><strong>WHOIS Note:</strong> {{ result.domain_intel.newly_registered_note }}</p>
@@ -92,7 +125,7 @@
     </section>
 
     <section class="card">
-      <h2>URL Analysis</h2>
+      <h3>URL Analysis</h3>
       {% if result.url_analysis.urls %}
       <ul>
         {% for item in result.url_analysis.urls %}
@@ -117,7 +150,7 @@
     </section>
 
     <section class="card">
-      <h2>Attachments</h2>
+      <h3>Attachments</h3>
       {% if result.attachments %}
       <table>
         <thead>
@@ -140,15 +173,15 @@
     </section>
 
     <section class="card">
-      <h2>Body Preview</h2>
-      <h3>Plain Text</h3>
+      <h3>Body Preview</h3>
+      <h4>Plain Text</h4>
       <pre>{{ result.body.plain }}</pre>
-      <h3>HTML Body</h3>
+      <h4>HTML Body</h4>
       <pre>{{ result.body.html }}</pre>
     </section>
 
     <section class="card">
-      <h2>Full Headers</h2>
+      <h3>Full Headers</h3>
       <pre>{% for k, v in result.headers.items() %}{{ k }}: {{ v }}
 {% endfor %}</pre>
     </section>

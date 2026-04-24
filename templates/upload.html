@@ -3,21 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Forensics Tool</title>
+  <title>Email Forensics Platform</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Email Forensics Web Tool</h1>
-    <p>Just upload your email file and click analyze.</p>
+  <div class="container narrow">
+    <header class="hero">
+      <h1><span class="bolt">⚡</span> Email Forensics Platform</h1>
+      <p>Advanced Threat Correlation • MITRE ATT&CK Mapping • BEC Detection</p>
+    </header>
 
-    <form action="/analyze" method="post" enctype="multipart/form-data" class="card">
-      <label for="file">Upload Email / .eml File</label>
-      <input id="file" type="file" name="file" accept=".eml,.email,message/rfc822" required>
+    <form action="/analyze" method="post" enctype="multipart/form-data" class="card upload-card">
+      <label for="file" class="dropzone">
+        <span class="upload-icon">☁</span>
+        <span class="drop-title">Drop .eml, .msg, .mbox, or .pdf file here</span>
+        <span class="drop-subtitle">Supports email files and exported PDFs</span>
+      </label>
+      <input id="file" type="file" name="file" accept=".eml,.email,.msg,.mbox,.pdf,message/rfc822" required>
       {% if error %}
-      <p class="danger">{{ error }}</p>
+      <p class="danger mt-8">{{ error }}</p>
       {% endif %}
-      <button type="submit">Analyze Email</button>
+      <button type="submit" class="btn-primary mt-12">Analyze Email</button>
     </form>
   </div>
 </body>
