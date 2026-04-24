@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analysis Result</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Analysis Result</h1>
+    <p>File: <strong>{{ filename }}</strong></p>
+    <p><a href="/">Analyze another file</a></p>
+
+    <section class="card">
+      <h2>Email Summary</h2>
+      <p><strong>From:</strong> {{ result.summary.from }}</p>
+      <p><strong>To:</strong> {{ result.summary.to }}</p>
+      <p><strong>Subject:</strong> {{ result.summary.subject }}</p>
+      <p><strong>Date:</strong> {{ result.summary.date }}</p>
+      <p><strong>Return-Path:</strong> {{ result.summary.return_path }}</p>
+    </section>
+
+    <section class="card">
+      <h2>Risk Score</h2>
+      <p class="{% if result.risk.level == 'HIGH' %}danger{% elif result.risk.level == 'MEDIUM' %}warn{% else %}ok{% endif %}">
+        <strong>{{ result.risk.level }}</strong> ({{ result.risk.score }})
+      </p>
+      <ul>
+        {% for reason in result.risk.reasons %}
+          <li class="danger">{{ reason }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Google Provider Detection</h2>
+      <p><strong>Email Provider:</strong>
+        <span class="{% if result.provider_detection.provider == 'Other' %}warn{% else %}ok{% endif %}">
+          {{ result.provider_detection.provider }}
+        </span>
+      </p>
+      <ul>
+        <li>Received via google.com: {{ result.provider_detection.signals.received_google }}</li>
+        <li>X-Google-Smtp-Source: {{ result.provider_detection.signals.x_google_smtp_source }}</li>
+        <li>X-Received Google markers: {{ result.provider_detection.signals.x_received_google }}</li>
+        <li>Google DKIM domain: {{ result.provider_detection.signals.dkim_google }}</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Header Analysis</h2>
+      <p><strong>Originating IP:</strong> {{ result.header_analysis.origin_ip or 'Not found' }}</p>
+      {% if result.header_analysis.origin_geo %}
+      <p><strong>Origin Location:</strong>
+        {{ result.header_analysis.origin_geo.city }},
+        {{ result.header_analysis.origin_geo.region }},
+        {{ result.header_analysis.origin_geo.country }}
+        ({{ result.header_analysis.origin_geo.isp }})
+      </p>
+      {% endif %}
+      <p><strong>SPF:</strong> <span class="{% if result.header_analysis.auth.spf == 'fail' %}danger{% endif %}">{{ result.header_analysis.auth.spf }}</span></p>
+      <p><strong>DKIM:</strong> <span class="{% if result.header_analysis.auth.dkim == 'missing' or result.header_analysis.auth.dkim == 'invalid' %}danger{% endif %}">{{ result.header_analysis.auth.dkim }}</span></p>
+      <p><strong>DMARC:</strong> <span class="{% if result.header_analysis.auth.dmarc == 'absent' %}warn{% endif %}">{{ result.header_analysis.auth.dmarc }}</span></p>
+      <p>
+        <strong>From vs Return-Path:</strong>
+        {% if result.header_analysis.domain_mismatch %}
+          <span class="danger">Mismatch ({{ result.header_analysis.from_domain }} != {{ result.header_analysis.return_domain }})</span>
+        {% else %}
+          <span class="ok">No mismatch detected</span>
+        {% endif %}
+      </p>
+
+      <h3>Received Chain</h3>
+      <ul>
+        {% for item in result.header_analysis.received_chain %}
+          <li><code>{{ item }}</code></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Domain Intelligence</h2>
+      <p><strong>Sender Domain:</strong> {{ result.domain_intel.sender_domain }}</p>
+      <p><strong>Domain Type:</strong> {{ result.domain_intel.domain_type }}</p>
+      <p><strong>WHOIS Note:</strong> {{ result.domain_intel.newly_registered_note }}</p>
+      <ul>
+        {% for flag in result.domain_intel.suspicious_patterns %}
+          <li class="danger">{{ flag }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>URL Analysis</h2>
+      {% if result.url_analysis.urls %}
+      <ul>
+        {% for item in result.url_analysis.urls %}
+        <li>
+          <code>{{ item.url }}</code>
+          {% if item.suspicious %}
+            <span class="danger">Suspicious</span>
+            <ul>
+              {% for reason in item.reasons %}
+              <li class="danger">{{ reason }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <span class="ok">Normal</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p>No URLs found.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h2>Attachments</h2>
+      {% if result.attachments %}
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Type</th><th>Size (bytes)</th><th>SHA256</th></tr>
+        </thead>
+        <tbody>
+        {% for a in result.attachments %}
+          <tr>
+            <td>{{ a.name }}</td>
+            <td>{{ a.type }}</td>
+            <td>{{ a.size }}</td>
+            <td><code>{{ a.sha256 }}</code></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No attachments found.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h2>Body Preview</h2>
+      <h3>Plain Text</h3>
+      <pre>{{ result.body.plain }}</pre>
+      <h3>HTML Body</h3>
+      <pre>{{ result.body.html }}</pre>
+    </section>
+
+    <section class="card">
+      <h2>Full Headers</h2>
+      <pre>{% for k, v in result.headers.items() %}{{ k }}: {{ v }}
+{% endfor %}</pre>
+    </section>
+  </div>
+</body>
+</html>
